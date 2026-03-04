@@ -59,6 +59,16 @@ const CONTENT_DEFAULT = {
     ['Command Palette (⌘K)','✓ Есть','✗ Нет','✗ Нет'],
     ['Встроенный справочник ошибок','✓ 22 статьи','✗ Нет','✗ Нет'],
   ],
+  cta: {
+    badge: 'Бесплатно · Открытый исходный код',
+    title: 'Начните торговать\nумнее — сегодня',
+    sub: '30 секунд до первой сделки в журнале. Никакой регистрации, никаких подписок, никаких облаков.',
+    btn: 'Скачать для macOS',
+    sysReq: 'macOS 14 Sonoma или новее · Apple Silicon & Intel Mac',
+  },
+  footer: {
+    copy: '© 2026 CryptoNites. Сделано с ❤️ для трейдеров.',
+  },
 };
 
 /* ════════════════════════════════════════════════════════════
@@ -235,6 +245,50 @@ function PreviewCompare({ compareRows }) {
   );
 }
 
+function PreviewCTA({ cta }) {
+  const lines = cta.title.split('\n');
+  return (
+    <div className="preview-section">
+      <div className="preview-section-title">CTA</div>
+      <div className="prev-hero" style={{background:'rgba(124,111,255,0.04)'}}>
+        <div className="prev-badge-pill">
+          <div className="prev-badge-dot"/>
+          {cta.badge}
+        </div>
+        <div className="prev-h1">
+          <span className="prev-gradient">{lines[0]}</span>
+          {lines[1] && <><br/><span className="prev-gradient">{lines[1]}</span></>}
+        </div>
+        <div className="prev-sub">{cta.sub}</div>
+        <div className="prev-btns">
+          <div className="prev-btn-p">⌘ {cta.btn}</div>
+        </div>
+        <div style={{marginTop:12,fontSize:11,color:'var(--text2)'}}>{cta.sysReq}</div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewFooter({ footer }) {
+  return (
+    <div className="preview-section">
+      <div className="preview-section-title">Footer</div>
+      <div style={{padding:'14px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:700}}>
+          <div style={{width:22,height:22,borderRadius:6,background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>⚡</div>
+          CryptoNites
+        </div>
+        <div style={{display:'flex',gap:16}}>
+          {['Функции','Галерея','Уникальность','Приватность'].map(l => (
+            <span key={l} style={{fontSize:12,color:'var(--text2)'}}>{l}</span>
+          ))}
+        </div>
+        <div style={{fontSize:11,color:'var(--text2)'}}>{footer.copy}</div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════
    EDITOR TABS  (left-hand editors)
 ════════════════════════════════════════════════════════════ */
@@ -371,6 +425,28 @@ function CompareEditor({ compareRows, onChange }) {
   );
 }
 
+function CTAEditor({ cta, onChange }) {
+  const set = (k, v) => onChange({ ...cta, [k]: v });
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Field label="Badge-текст" value={cta.badge} onChange={v => set('badge', v)} />
+      <Field label="Заголовок (перенос строки = \\n)" value={cta.title} onChange={v => set('title', v)} multiline rows={2} />
+      <Field label="Подзаголовок" value={cta.sub} onChange={v => set('sub', v)} multiline rows={3} />
+      <Field label="Текст кнопки" value={cta.btn} onChange={v => set('btn', v)} />
+      <Field label="Системные требования" value={cta.sysReq} onChange={v => set('sysReq', v)} />
+    </div>
+  );
+}
+
+function FooterEditor({ footer, onChange }) {
+  const set = (k, v) => onChange({ ...footer, [k]: v });
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Field label="Копирайт" value={footer.copy} onChange={v => set('copy', v)} />
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════
    LOGIN / NO-CONFIG
 ════════════════════════════════════════════════════════════ */
@@ -481,6 +557,8 @@ function AdminApp() {
     { id: 'gallery',  label: '🖼 Gallery' },
     { id: 'unique',   label: '✨ Unique' },
     { id: 'compare',  label: '📊 Compare' },
+    { id: 'cta',      label: '🚀 CTA' },
+    { id: 'footer',   label: '🔗 Footer' },
   ];
 
   const renderEditor = () => {
@@ -490,6 +568,8 @@ function AdminApp() {
       case 'gallery':  return <GalleryEditor  slides={content.slides}           onChange={v => setContent(c => ({ ...c, slides: v }))} />;
       case 'unique':   return <UniqueEditor   unique={content.unique}           onChange={v => setContent(c => ({ ...c, unique: v }))} />;
       case 'compare':  return <CompareEditor  compareRows={content.compareRows} onChange={v => setContent(c => ({ ...c, compareRows: v }))} />;
+      case 'cta':      return <CTAEditor    cta={content.cta}       onChange={v => setContent(c => ({ ...c, cta: v }))} />;
+      case 'footer':   return <FooterEditor footer={content.footer} onChange={v => setContent(c => ({ ...c, footer: v }))} />;
     }
   };
 
@@ -500,6 +580,8 @@ function AdminApp() {
       case 'gallery':  return <PreviewGallery  slides={content.slides} />;
       case 'unique':   return <PreviewUnique   unique={content.unique} />;
       case 'compare':  return <PreviewCompare  compareRows={content.compareRows} />;
+      case 'cta':      return <PreviewCTA    cta={content.cta} />;
+      case 'footer':   return <PreviewFooter footer={content.footer} />;
     }
   };
 
