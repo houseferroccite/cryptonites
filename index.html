@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoNites — Профессиональный торговый журнал для macOS</title>
+
+<!-- React 18 -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- GSAP + ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<!-- Lenis smooth scroll -->
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+
+<!-- Swiper -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<style>
+/* ═══ RESET & BASE ══════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#7C6FFF;
+  --accent2:#A78BFA;
+  --profit:#00C96B;
+  --loss:#FF3B5C;
+  --warning:#F59E0B;
+  --bg0:#0B0D11;
+  --bg1:#111318;
+  --bg2:#181B22;
+  --bg3:#1E2230;
+  --text:#F0F2F5;
+  --text2:#9CA3AF;
+  --border:rgba(255,255,255,0.07);
+  --glow:rgba(124,111,255,0.35);
+}
+html{scroll-behavior:auto;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;background:var(--bg0);color:var(--text);overflow-x:hidden;line-height:1.6}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+
+/* ═══ CANVAS ════════════════════════════════════════════════════ */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+/* ═══ NAV ═══════════════════════════════════════════════════════ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 48px;
+  backdrop-filter:blur(20px) saturate(180%);
+  background:rgba(11,13,17,0.7);
+  border-bottom:1px solid var(--border);
+  transition:padding .3s,background .3s;
+}
+nav.scrolled{padding:11px 48px;background:rgba(11,13,17,0.92)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;color:var(--text);text-decoration:none}
+.nav-logo-icon{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 20px var(--glow);transition:transform .3s,box-shadow .3s}
+.nav-logo:hover .nav-logo-icon{transform:rotate(-5deg) scale(1.1);box-shadow:0 0 36px var(--glow)}
+.nav-links{display:flex;gap:32px;list-style:none}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:1px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.23,1,.32,1)}
+.nav-links a:hover{color:var(--text)}
+.nav-links a:hover::after{transform:scaleX(1)}
+.nav-cta{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 0 24px var(--glow)}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 0 40px var(--glow)}
+
+/* ═══ TICKER ════════════════════════════════════════════════════ */
+.ticker-wrap{position:relative;z-index:3;overflow:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg1);padding:13px 0}
+.ticker-wrap::before,.ticker-wrap::after{content:'';position:absolute;top:0;bottom:0;width:100px;z-index:1}
+.ticker-wrap::before{left:0;background:linear-gradient(90deg,var(--bg1),transparent)}
+.ticker-wrap::after{right:0;background:linear-gradient(-90deg,var(--bg1),transparent)}
+.ticker-track{display:flex;width:max-content;animation:ticker 35s linear infinite}
+.ticker-item{display:flex;align-items:center;gap:8px;padding:0 32px;font-size:13px;font-weight:600;white-space:nowrap}
+.t-name{color:var(--text2)}
+.t-price{color:var(--text)}
+.t-change{font-size:12px}
+.t-up{color:var(--profit)}
+.t-down{color:var(--loss)}
+.ticker-sep{color:var(--border)}
+
+/* ═══ HERO ══════════════════════════════════════════════════════ */
+#hero{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;overflow:hidden}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,111,255,0.12);border:1px solid rgba(124,111,255,0.3);border-radius:100px;padding:6px 16px;font-size:13px;font-weight:600;color:var(--accent2);margin-bottom:32px;opacity:0;transform:translateY(20px);animation:fadeUp .8s .2s forwards}
+.badge-dot{width:7px;height:7px;border-radius:50%;background:var(--profit);animation:pulse 2s infinite;flex-shrink:0}
+h1{font-size:clamp(42px,7vw,88px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:24px;opacity:0;transform:translateY(30px);animation:fadeUp .9s .4s forwards}
+.gradient-text{background:linear-gradient(135deg,#fff 30%,var(--accent2) 60%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.highlight{color:var(--profit);-webkit-text-fill-color:var(--profit)}
+.hero-sub{font-size:clamp(16px,2.2vw,20px);color:var(--text2);max-width:620px;margin-bottom:48px;opacity:0;transform:translateY(20px);animation:fadeUp .9s .6s forwards;line-height:1.7}
+.hero-buttons{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;opacity:0;transform:translateY(20px);animation:fadeUp .9s .8s forwards;margin-bottom:80px}
+.btn-primary{display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:700;cursor:pointer;transition:all .25s;box-shadow:0 0 40px var(--glow),0 4px 24px rgba(0,0,0,0.4);text-decoration:none;position:relative;overflow:hidden}
+.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .3s}
+.btn-primary:hover::before{opacity:1}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 60px var(--glow),0 8px 32px rgba(0,0,0,0.5)}
+.btn-secondary{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);border-radius:14px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer;transition:all .25s;text-decoration:none;backdrop-filter:blur(10px)}
+.btn-secondary:hover{background:rgba(255,255,255,0.1);transform:translateY(-2px)}
+
+/* ═══ MACOS MOCKUP ══════════════════════════════════════════════ */
+.hero-mockup{position:relative;z-index:2;opacity:0;transform:translateY(40px) perspective(1000px) rotateX(8deg);animation:mockupIn 1.2s 1s cubic-bezier(0.22,1,0.36,1) forwards;width:100%;max-width:960px}
+.mockup-window{background:var(--bg1);border:1px solid rgba(255,255,255,0.1);border-radius:20px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,0.8),0 0 80px rgba(124,111,255,0.15)}
+.mockup-titlebar{display:flex;align-items:center;gap:8px;padding:14px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot-red{background:#FF5F57}
+.dot-yellow{background:#FFBD2E}
+.dot-green{background:#27C93F}
+.mockup-title{flex:1;text-align:center;font-size:13px;color:var(--text2);font-weight:500}
+.mockup-body{display:flex;height:460px}
+.mockup-sidebar{width:196px;background:var(--bg2);border-right:1px solid var(--border);padding:14px 8px;display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:13px;color:var(--text2);cursor:default;transition:all .2s}
+.sidebar-item.active{background:rgba(124,111,255,0.15);color:var(--text)}
+.sidebar-item.active .s-icon{color:var(--accent)}
+.s-icon{font-size:14px;width:18px;text-align:center}
+.sidebar-label{font-size:10px;color:var(--text2);padding:10px 12px 3px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.mockup-content{flex:1;padding:18px;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px}
+.stat-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:5px;letter-spacing:.04em}
+.stat-value{font-size:17px;font-weight:800}
+.stat-value.green{color:var(--profit)}
+.stat-value.red{color:var(--loss)}
+.stat-value.purple{color:var(--accent2)}
+.stat-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.trade-list-header{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.trade-rows{display:flex;flex-direction:column;gap:6px}
+.trade-row{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px}
+.trade-ticker{font-weight:700;width:52px;font-size:13px}
+.trade-side{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.long{background:rgba(0,201,107,0.15);color:var(--profit)}
+.short{background:rgba(255,59,92,0.15);color:var(--loss)}
+.trade-date{color:var(--text2);flex:1;font-size:11px}
+.trade-pnl{font-weight:700;white-space:nowrap}
+.trade-pnl.pos{color:var(--profit)}
+.trade-pnl.neg{color:var(--loss)}
+.mini-chart{flex:1;display:flex;align-items:flex-end;gap:2px;height:38px;max-width:80px}
+.bar{flex:1;border-radius:2px 2px 0 0;animation:barGrow 1s cubic-bezier(0.34,1.56,0.64,1) forwards;transform-origin:bottom}
+
+/* ═══ STATS STRIP ═══════════════════════════════════════════════ */
+.stats-strip{position:relative;z-index:2;display:flex;justify-content:center;flex-wrap:wrap;background:var(--bg1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.stat-strip-item{text-align:center;padding:32px 52px;border-right:1px solid var(--border)}
+.stat-strip-item:last-child{border-right:none}
+.big-num{font-size:48px;font-weight:900;line-height:1;background:linear-gradient(135deg,#fff,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.big-label{font-size:13px;color:var(--text2);margin-top:6px}
+
+/* ═══ SECTION COMMON ════════════════════════════════════════════ */
+section{position:relative;z-index:2;padding:100px 24px;max-width:1200px;margin:0 auto}
+.section-eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--accent2);text-transform:uppercase;margin-bottom:14px;display:block}
+.section-title{font-size:clamp(28px,4vw,48px);font-weight:800;letter-spacing:-.03em;margin-bottom:16px;line-height:1.1}
+.section-sub{font-size:17px;color:var(--text2);max-width:560px;margin-bottom:64px;line-height:1.7;margin-left:auto;margin-right:auto}
+
+/* ─── Features header centered ─ */
+#features .section-eyebrow,
+#features .section-title,
+#features .section-sub{text-align:center;margin-left:auto;margin-right:auto}
+
+/* ═══ FEATURES ══════════════════════════════════════════════════ */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px;position:relative;overflow:hidden;transition:all .4s cubic-bezier(.23,1,.32,1);cursor:default;opacity:0;transform:translateY(40px)}
+.feat-card.visible{animation:fadeUp .7s forwards}
+.feat-card::before{content:'';position:absolute;inset:0;background:radial-gradient(600px circle at var(--mx,50%) var(--my,50%),rgba(124,111,255,0.08),transparent 60%);opacity:0;transition:opacity .4s}
+.feat-card:hover::before{opacity:1}
+.feat-card:hover{border-color:rgba(124,111,255,0.3);transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px rgba(124,111,255,0.1)}
+.feat-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:20px;position:relative;z-index:1}
+.feat-title{font-size:18px;font-weight:700;margin-bottom:10px;position:relative;z-index:1}
+.feat-desc{font-size:14px;color:var(--text2);line-height:1.7;position:relative;z-index:1}
+.feat-badge{display:inline-block;margin-top:14px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;position:relative;z-index:1}
+.badge-new{background:rgba(0,201,107,0.15);color:var(--profit)}
+.badge-unique{background:rgba(124,111,255,0.15);color:var(--accent2)}
+.badge-macos{background:rgba(245,158,11,0.15);color:var(--warning)}
+
+/* ═══ GALLERY ═══════════════════════════════════════════════════ */
+.gallery-section{position:relative;z-index:2;padding:80px 0 100px;max-width:100%;margin:0}
+.gallery-header{text-align:center;padding:0 24px;margin-bottom:52px}
+.ss-wrap{position:relative;padding-bottom:60px}
+.ss-swiper{overflow:hidden!important}
+.ss-swiper .swiper-slide{width:min(74vw,900px);border-radius:20px;overflow:hidden;cursor:grab;background:var(--bg2);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px var(--border);transition:transform .6s cubic-bezier(.23,1,.32,1),opacity .6s,box-shadow .6s;position:relative}
+.ss-swiper .swiper-slide:active{cursor:grabbing}
+.ss-swiper .swiper-slide-active{transform:scale(1)!important;box-shadow:0 32px 80px rgba(0,0,0,.65),0 0 0 1px rgba(124,111,255,.3),0 0 60px rgba(124,111,255,.12)!important}
+.ss-swiper .swiper-slide:not(.swiper-slide-active){transform:scale(.9)!important;opacity:.38}
+.slide-img{width:100%;display:block;height:clamp(260px,40vw,520px);object-fit:cover;object-position:top center}
+.slide-caption{position:absolute;bottom:0;left:0;right:0;padding:52px 24px 20px;background:linear-gradient(0deg,rgba(11,13,17,.95) 0%,rgba(11,13,17,.5) 55%,transparent 100%);font-size:13px;font-weight:600;color:rgba(255,255,255,.9);pointer-events:none}
+.ss-prev,.ss-next{position:absolute;top:calc(50% - 36px);z-index:10;width:48px;height:48px;background:rgba(13,16,23,.88);backdrop-filter:blur(16px);border-radius:50%;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;user-select:none}
+.ss-prev{left:max(16px,calc(50% - min(37vw,452px) - 62px))}
+.ss-next{right:max(16px,calc(50% - min(37vw,452px) - 62px))}
+.ss-prev:hover,.ss-next:hover{background:rgba(124,111,255,.3);border-color:rgba(124,111,255,.5);transform:scale(1.1)}
+.ss-pag{position:absolute!important;bottom:18px;left:0;right:0}
+.ss-pag .swiper-pagination-bullet{background:rgba(240,242,245,.25)!important;opacity:1!important;width:6px!important;height:6px!important;transition:all .3s}
+.ss-pag .swiper-pagination-bullet-active{background:var(--accent)!important;width:28px!important;border-radius:3px!important}
+
+/* ═══ UNIQUE SECTION ════════════════════════════════════════════ */
+.unique-section{position:relative;z-index:2;background:linear-gradient(135deg,rgba(124,111,255,0.06) 0%,rgba(0,201,107,0.03) 100%);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:100px 24px}
+.unique-inner{max-width:1200px;margin:0 auto}
+.unique-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.unique-list{display:flex;flex-direction:column;gap:24px}
+.unique-item{display:flex;gap:16px;align-items:flex-start;opacity:0;transform:translateX(-30px);transition:all .6s cubic-bezier(.23,1,.32,1)}
+.unique-item.visible{opacity:1;transform:translateX(0)}
+.unique-num{width:36px;height:36px;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 20px var(--glow)}
+.unique-text h4{font-size:16px;font-weight:700;margin-bottom:6px}
+.unique-text p{font-size:14px;color:var(--text2);line-height:1.6}
+
+/* ═══ AI WIDGET ═════════════════════════════════════════════════ */
+.ai-vis{position:relative;background:var(--bg2);border:1px solid rgba(124,111,255,0.2);border-radius:24px;padding:32px;overflow:hidden}
+.ai-vis::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(124,111,255,0.2),transparent 70%);animation:floatOrb 6s ease-in-out infinite;pointer-events:none}
+.ai-header{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.08em;margin-bottom:16px}
+.ai-messages{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1}
+.ai-msg{padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.5;max-width:90%}
+.ai-msg.user{background:rgba(124,111,255,0.15);border:1px solid rgba(124,111,255,0.2);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.bot{background:var(--bg3);border:1px solid var(--border);color:var(--text2);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-typing{display:flex;gap:4px;align-items:center;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;border-bottom-left-radius:4px;width:fit-content}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:typingDot 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+.ai-actions{margin-top:16px;display:flex;gap:8px}
+.ai-action-btn{border-radius:8px;padding:8px 14px;font-size:12px;border:1px solid}
+
+/* ═══ COMPARISON ════════════════════════════════════════════════ */
+.compare-section{position:relative;z-index:2;padding:100px 24px;max-width:100%;background:rgba(255,255,255,.01)}
+.compare-inner{max-width:920px;margin:0 auto}
+.compare-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-top:56px}
+.compare-table th{padding:18px 24px;text-align:left;background:var(--bg2);font-size:13px;font-weight:700;border-bottom:1px solid var(--border)}
+.compare-table th.our{color:var(--accent2)}
+.compare-table td{padding:14px 24px;font-size:14px;border-bottom:1px solid var(--border);background:var(--bg1)}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table td:first-child{color:var(--text2)}
+.check{color:var(--profit);font-weight:700}
+.cross{color:var(--loss);opacity:.45}
+.our-col{background:rgba(124,111,255,0.05)!important}
+
+/* ═══ PRIVACY ═══════════════════════════════════════════════════ */
+.privacy-section{position:relative;z-index:2;padding:100px 24px;background:linear-gradient(180deg,transparent,rgba(124,111,255,.04),transparent)}
+.privacy-inner{max-width:1100px;margin:0 auto}
+.privacy-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.priv-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;text-align:center;opacity:0;transform:scale(0.9);transition:all .5s cubic-bezier(.34,1.56,.64,1)}
+.priv-card.visible{opacity:1;transform:scale(1)}
+.priv-card:hover{transform:translateY(-6px) scale(1.02);border-color:rgba(124,111,255,.25)}
+.priv-icon{font-size:36px;margin-bottom:14px;display:block;animation:floatOrb 4s ease-in-out infinite}
+.priv-card:nth-child(2) .priv-icon{animation-delay:.5s}
+.priv-card:nth-child(3) .priv-icon{animation-delay:1s}
+.priv-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.priv-desc{font-size:13px;color:var(--text2);line-height:1.6}
+
+/* ═══ CTA ═══════════════════════════════════════════════════════ */
+.cta-section{position:relative;z-index:2;overflow:hidden;padding:120px 24px;text-align:center}
+.cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(124,111,255,0.15),transparent 70%);pointer-events:none;animation:breathe 4s ease-in-out infinite}
+.cta-inner{position:relative;z-index:1;max-width:700px;margin:0 auto}
+.cta-title{font-size:clamp(32px,5vw,62px);font-weight:900;letter-spacing:-.03em;margin-bottom:20px}
+.cta-sub{font-size:18px;color:var(--text2);margin-bottom:48px;line-height:1.7}
+.sys-req{margin-top:24px;font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* ═══ FOOTER ════════════════════════════════════════════════════ */
+footer{position:relative;z-index:2;border-top:1px solid var(--border);padding:40px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
+.footer-links{display:flex;gap:24px}
+.footer-links a{color:var(--text2);text-decoration:none;font-size:13px;transition:color .2s}
+.footer-links a:hover{color:var(--text)}
+.footer-copy{font-size:12px;color:var(--text2)}
+
+/* ═══ KEYFRAMES ═════════════════════════════════════════════════ */
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+@keyframes mockupIn{to{opacity:1;transform:translateY(0) perspective(1000px) rotateX(0deg)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+@keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-20px) scale(1.05)}}
+@keyframes breathe{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}}
+@keyframes typingDot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+/* ═══ SCROLL PROGRESS ═══════════════════════════════════════════ */
+.scroll-progress{
+  position:fixed;top:0;left:0;height:3px;z-index:300;
+  background:linear-gradient(90deg,var(--accent),var(--accent2),var(--profit));
+  pointer-events:none;width:0%;
+  box-shadow:0 0 8px var(--glow);
+}
+
+/* ═══ HAMBURGER / MOBILE MENU ════════════════════════════════════ */
+.hamburger{
+  display:none;flex-direction:column;gap:5px;
+  cursor:pointer;padding:4px;background:none;border:none;
+}
+.hamburger span{
+  display:block;width:22px;height:2px;
+  background:var(--text);border-radius:2px;
+  transition:all .35s cubic-bezier(.23,1,.32,1);
+}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mob-menu{
+  position:fixed;inset:0;
+  background:rgba(11,13,17,.97);backdrop-filter:blur(24px);
+  z-index:198;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:36px;
+  opacity:0;pointer-events:none;transition:opacity .4s;
+}
+.mob-menu.open{opacity:1;pointer-events:all}
+.mob-menu a{
+  color:var(--text);font-size:26px;font-weight:700;
+  text-decoration:none;opacity:0;transform:translateY(24px);
+  transition:color .2s;
+}
+.mob-menu.open a{animation:fadeUp .4s forwards}
+.mob-menu.open a:nth-child(1){animation-delay:.05s}
+.mob-menu.open a:nth-child(2){animation-delay:.1s}
+.mob-menu.open a:nth-child(3){animation-delay:.15s}
+.mob-menu.open a:nth-child(4){animation-delay:.2s}
+.mob-menu.open a:nth-child(5){animation-delay:.25s}
+.mob-menu a:hover{color:var(--accent2)}
+
+/* ═══ BACK TO TOP ════════════════════════════════════════════════ */
+.back-top{
+  position:fixed;bottom:32px;right:32px;z-index:150;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--accent);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .3s,transform .3s,box-shadow .3s;
+  box-shadow:0 0 24px var(--glow);
+}
+.back-top.show{opacity:1;transform:translateY(0)}
+.back-top:hover{transform:translateY(-4px)!important;box-shadow:0 0 44px var(--glow)}
+
+/* ═══ RESPONSIVE ════════════════════════════════════════════════ */
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  nav.scrolled{padding:10px 20px}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+  .unique-grid{grid-template-columns:1fr;gap:40px}
+  .privacy-cards{grid-template-columns:1fr}
+  .stats-strip{flex-direction:column}
+  .stat-strip-item{border-right:none;border-bottom:1px solid var(--border)}
+  footer{flex-direction:column;text-align:center;padding:32px 24px}
+  .mockup-sidebar{display:none}
+  .stat-cards{grid-template-columns:repeat(2,1fr)}
+  .compare-table{font-size:12px}
+  .compare-table th,.compare-table td{padding:10px 14px}
+  .ss-swiper .swiper-slide{width:88vw}
+  .back-top{bottom:20px;right:20px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useEffect, useRef, useState } = React;
+
+/* ═══════════════════════════════════════════════════════════
+   GIST CMS CONFIG
+   Gist raw URL задаётся здесь — это публичный URL, не секрет.
+   Секреты (PAT, пароль) живут в admin-config.js (не в git).
+═══════════════════════════════════════════════════════════ */
+const GIST_RAW_URL = 'https://gist.githubusercontent.com/houseferroccite/b909d0117f57de64cf90c34e9b35a49d/raw/content.json';
+
+/* ═══════════════════════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════════════════════ */
+const COIN_IDS = 'bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2,chainlink,polkadot';
+const COIN_LABELS = {
+  bitcoin:'BTC', ethereum:'ETH', solana:'SOL', binancecoin:'BNB',
+  ripple:'XRP', dogecoin:'DOGE', cardano:'ADA', 'avalanche-2':'AVAX',
+  chainlink:'LINK', polkadot:'DOT'
+};
+
+// Fallback хардкод на случай ошибки API
+const COINS_FALLBACK = [
+  {n:'BTC',p:'$84,512',c:'+2.4%',up:true},
+  {n:'ETH',p:'$3,218',c:'+1.8%',up:true},
+  {n:'SOL',p:'$142.6',c:'-0.9%',up:false},
+  {n:'BNB',p:'$412.3',c:'+3.1%',up:true},
+  {n:'XRP',p:'$0.617',c:'+0.5%',up:true},
+  {n:'DOGE',p:'$0.112',c:'-1.4%',up:false},
+  {n:'ADA',p:'$0.538',c:'+1.2%',up:true},
+  {n:'AVAX',p:'$28.4',c:'+4.2%',up:true},
+  {n:'LINK',p:'$18.7',c:'-0.3%',up:false},
+  {n:'DOT',p:'$7.82',c:'+0.8%',up:true},
+];
+
+function formatPrice(price) {
+  if (price >= 1000) return '$' + price.toLocaleString('en-US', {maximumFractionDigits:0});
+  if (price >= 1)    return '$' + price.toLocaleString('en-US', {maximumFractionDigits:2});
+  return '$' + price.toFixed(4);
+}
+
+async function fetchCoins() {
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${COIN_IDS}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('CoinGecko error');
+  const data = await res.json();
+  return data.map(coin => {
+    const ch = coin.price_change_percentage_24h || 0;
+    return {
+      n: COIN_LABELS[coin.id] || coin.symbol.toUpperCase(),
+      p: formatPrice(coin.current_price),
+      c: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%',
+      up: ch >= 0,
+    };
+  });
+}
+
+const CONTENT_DEFAULT = {
+  hero: {
+    badge: 'Эксклюзивно для macOS · Версия 1.0',
+    titleLine1: 'Торговый журнал',
+    titleLine2: 'нового поколения',
+    titleLine3: 'для крипто-трейдеров',
+    sub: 'CryptoNites — это не просто журнал сделок. Это AI-powered аналитический центр, построенный нативно для macOS с глубокой интеграцией в экосистему Apple.',
+    btnPrimary: 'Скачать для Mac',
+    btnSecondary: 'Смотреть возможности',
+  },
+  features: [
+    {icon:'🧠',bg:'rgba(124,111,255,0.15)',title:'AI-анализ через OpenRouter',desc:'Подключите GPT-4o, Claude Sonnet или бесплатные Llama/Mistral модели. AI анализирует ваши сделки, находит паттерны и даёт рекомендации прямо в приложении.',badge:'Эксклюзивно',bCls:'badge-unique'},
+    {icon:'📊',bg:'rgba(0,201,107,0.12)',title:'Живой Dashboard',desc:'Win Rate, Profit Factor, equity-кривая, рекордные дни и тепловая карта активности — всё обновляется в реальном времени. Никакой ручной работы.',badge:'Актуально',bCls:'badge-new'},
+    {icon:'📈',bg:'rgba(245,158,11,0.12)',title:'Свечной график прямо в приложении',desc:'Встроенные OHLCV-графики через CoinGecko — без браузера, без переключения окон. BTC, ETH, SOL и тысячи других монет с кэшированием.',badge:'macOS Native',bCls:'badge-macos'},
+    {icon:'🔐',bg:'rgba(124,111,255,0.15)',title:'PIN + Touch ID блокировка',desc:'Полная защита в Keychain с флагом kSecAttrAccessibleWhenUnlockedThisDeviceOnly. Никакой синхронизации с iCloud. Автоблокировка с таймером.',badge:'Уникально',bCls:'badge-unique'},
+    {icon:'🔄',bg:'rgba(255,59,92,0.12)',title:'Импорт из BingX',desc:'Автоматически подтягивайте историю сделок через официальный API BingX. Фьючерсы и спот. Ключи зашифрованы в системном Keychain.',badge:'Интеграция',bCls:'badge-new'},
+    {icon:'📤',bg:'rgba(0,201,107,0.12)',title:'Мультиформатный экспорт',desc:'CSV с UTF-8 BOM для Excel RU, JSON, Markdown, TXT — одним кликом из журнала. Экспортируется именно то, что видите с активным фильтром.',badge:'4 формата',bCls:'badge-macos'},
+    {icon:'⌘', bg:'rgba(124,111,255,0.15)',title:'Command Palette (⌘K)',desc:'Быстрая навигация, поиск по сделкам и запуск AI-анализа — всё с клавиатуры без мыши. Developer experience уровня для трейдера.',badge:'macOS Native',bCls:'badge-macos'},
+    {icon:'📰',bg:'rgba(245,158,11,0.12)',title:'Новостной фон + AI-саммари',desc:'Последние новости по любой монете через CryptoPanic API с автоматическим AI-резюме на русском. Принимайте решения информированно.',badge:'Новинка',bCls:'badge-new'},
+    {icon:'📖',bg:'rgba(0,201,107,0.12)',title:'Встроенный справочник ошибок',desc:'22 статьи с пошаговыми решениями — от ошибок API до проблем с биометрией. Поиск и фильтрация по категориям. Всё внутри приложения.',badge:'Только здесь',bCls:'badge-unique'},
+  ],
+  slides: [
+    {src:'assets/screenshots/dashbord.png',cap:'📊 Dashboard — обзор портфеля и статистика'},
+    {src:'assets/screenshots/Viewing transactions is common.png',cap:'📋 Журнал сделок — полный список'},
+    {src:'assets/screenshots/Viewing the transaction in detail.png',cap:'🔍 Просмотр сделки в деталях'},
+    {src:'assets/screenshots/Transactions addendum.png',cap:'✏️ Добавление новой сделки'},
+    {src:'assets/screenshots/AI_annalization.png',cap:'🧠 AI-анализ сделок — OpenRouter · 9 моделей'},
+    {src:'assets/screenshots/money.png',cap:'📈 Рынок — свечные графики в реальном времени'},
+    {src:'assets/screenshots/depozit.png',cap:'💰 Депозит — история пополнений'},
+    {src:'assets/screenshots/account.png',cap:'👤 Профиль — API ключи и настройки'},
+  ],
+  unique: [
+    {n:1,title:'Нативный SwiftUI без Electron',desc:'Большинство «нативных» Mac-приложений — Electron-обёртки. CryptoNites написан полностью на SwiftUI и SwiftData. Минимум памяти, максимум скорости.'},
+    {n:2,title:'AI с автофоллбэком на 5 моделей',desc:'Если выбранная AI-модель недоступна или перегружена — приложение автоматически переключается на следующую бесплатную. Анализ всегда работает.'},
+    {n:3,title:'Данные никогда не покидают Mac',desc:'Все сделки хранятся локально в SwiftData. API-ключи — в Keychain с самым строгим флагом. Нет сервера — нет утечек.'},
+    {n:4,title:'Аватар + профиль трейдера',desc:'Загрузите фото, выберите цвет, задайте имя — приложение персонализируется под вас. Мелочь, которой нет ни в одном торговом журнале.'},
+    {n:5,title:'Единый центр сделок, рынка и AI',desc:'Не надо открывать TradingView, Telegram и ChatGPT. CryptoNites объединяет всё в одной нативной Mac-программе.'},
+  ],
+  compareRows: [
+    ['Нативный macOS (SwiftUI)','✓ Да','✗ Нет','✗ Electron'],
+    ['AI-анализ с выбором модели','✓ 9 моделей','✗ Нет','✗ Нет'],
+    ['Автофоллбэк при недоступности AI','✓ Автомат.','✗ Нет','✗ Нет'],
+    ['Импорт из биржи (BingX)','✓ API','✗ CSV вручную','✗ Только CSV'],
+    ['Свечной график внутри','✓ Встроен','✗ Нет','✗ Нет'],
+    ['PIN + Touch ID','✓ Keychain','✗ Нет','✗ Нет'],
+    ['Данные остаются локально','✓ Всегда','✗ Облако','✗ Сервер'],
+    ['Экспорт CSV/JSON/MD/TXT','✓ 4 формата','✗ 1 формат','✗ Только CSV'],
+    ['Command Palette (⌘K)','✓ Есть','✗ Нет','✗ Нет'],
+    ['Встроенный справочник ошибок','✓ 22 статьи','✗ Нет','✗ Нет'],
+  ],
+};
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS 2D BACKGROUND
+═══════════════════════════════════════════════════════════ */
+function useParticleCanvas() {
+  useEffect(() => {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let animId;
+    let mX = window.innerWidth/2, mY = window.innerHeight/2;
+
+    const resize = () => {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    document.addEventListener('mousemove', e => { mX = e.clientX; mY = e.clientY; });
+
+    const orbData = [
+      { x:0.15, y:0.30, r:180, color:'#7C6FFF', vx:0.28,  vy:0.18,  px:0   },
+      { x:0.80, y:0.65, r:150, color:'#A78BFA', vx:-0.22, vy:0.25,  px:2.1 },
+      { x:0.55, y:0.18, r:120, color:'#00C96B', vx:0.18,  vy:-0.22, px:4.3 },
+      { x:0.35, y:0.82, r:100, color:'#FF3B5C', vx:-0.20, vy:-0.18, px:1.5 },
+    ];
+    const orbs = orbData.map(o => ({...o, cx:o.x*window.innerWidth, cy:o.y*window.innerHeight}));
+
+    const NUM_PARTICLES = 80;
+    const particles = Array.from({length:NUM_PARTICLES}, () => ({
+      x:  Math.random() * window.innerWidth,
+      y:  Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.55,
+      vy: (Math.random() - 0.5) * 0.55,
+      r:  Math.random() * 2 + 0.8,
+      a:  Math.random() * 0.4 + 0.15,
+      c:  Math.random() > 0.5 ? '124,111,255' : '167,139,250',
+    }));
+
+    let t = 0;
+    const CONNECT_DIST = 130;
+
+    function draw() {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      t += 0.005;
+
+      // Orbs
+      orbs.forEach(o => {
+        o.cx += o.vx + Math.sin(t + o.px) * 0.3;
+        o.cy += o.vy + Math.cos(t + o.px) * 0.25;
+        if (o.cx < o.r)     { o.cx = o.r;   o.vx = Math.abs(o.vx); }
+        if (o.cx > W - o.r) { o.cx = W-o.r; o.vx = -Math.abs(o.vx); }
+        if (o.cy < o.r)     { o.cy = o.r;   o.vy = Math.abs(o.vy); }
+        if (o.cy > H - o.r) { o.cy = H-o.r; o.vy = -Math.abs(o.vy); }
+
+        const g = ctx.createRadialGradient(o.cx, o.cy, 0, o.cx, o.cy, o.r);
+        const hex = o.color;
+        g.addColorStop(0, hex + '28');
+        g.addColorStop(0.5, hex + '10');
+        g.addColorStop(1, hex + '00');
+        ctx.beginPath();
+        ctx.arc(o.cx, o.cy, o.r, 0, Math.PI*2);
+        ctx.fillStyle = g;
+        ctx.fill();
+      });
+
+      // Particles
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) { p.x = 0; p.vx *= -1; }
+        if (p.x > W) { p.x = W; p.vx *= -1; }
+        if (p.y < 0) { p.y = 0; p.vy *= -1; }
+        if (p.y > H) { p.y = H; p.vy *= -1; }
+
+        // Mouse repel
+        const dx = p.x - mX, dy = p.y - mY;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 80) {
+          p.vx += (dx/dist) * 0.06;
+          p.vy += (dy/dist) * 0.06;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${p.c},${p.a})`;
+        ctx.fill();
+      });
+
+      // Connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i+1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d  = Math.sqrt(dx*dx+dy*dy);
+          if (d < CONNECT_DIST) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(124,111,255,${0.11*(1-d/CONNECT_DIST)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(draw);
+    }
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   SCROLL PROGRESS
+═══════════════════════════════════════════════════════════ */
+function ScrollProgress() {
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const doc = document.documentElement;
+      const scrolled = doc.scrollTop || document.body.scrollTop;
+      const total = doc.scrollHeight - doc.clientHeight;
+      setPct(total > 0 ? (scrolled / total) * 100 : 0);
+    };
+    window.addEventListener('scroll', onScroll, {passive:true});
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return <div className="scroll-progress" style={{width:`${pct}%`}}/>;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BACK TO TOP
+═══════════════════════════════════════════════════════════ */
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 500);
+    window.addEventListener('scroll', onScroll, {passive:true});
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const handleClick = () => {
+    if (window.__lenis) window.__lenis.scrollTo(0, {duration:1.2});
+    else window.scrollTo({top:0, behavior:'smooth'});
+  };
+  return (
+    <button
+      className={`back-top${show?' show':''}`}
+      onClick={handleClick}
+      aria-label="Наверх"
+    >
+      <svg width={18} height={18} fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+    </button>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════════════════ */
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', onScroll, {passive:true});
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Lock body scroll when menu open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
+
+  const go = (id) => {
+    setMenuOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (window.__lenis) window.__lenis.scrollTo(el, {offset:-80, duration:1.4});
+      else el.scrollIntoView({behavior:'smooth'});
+    }, 300);
+  };
+
+  const links = [
+    ['features','Функции'],['gallery','Галерея'],
+    ['unique','Уникальность'],['compare','Сравнение'],['security','Безопасность'],
+  ];
+
+  return (
+    <>
+      <nav className={scrolled ? 'scrolled' : ''} style={{zIndex:201}}>
+        <a className="nav-logo" href="#">
+          <div className="nav-logo-icon">⚡</div>
+          CryptoNites
+        </a>
+        <ul className="nav-links">
+          {links.map(([id,label]) => (
+            <li key={id}>
+              <a href={`#${id}`} onClick={e=>{e.preventDefault();go(id);}}>
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <button className="nav-cta" style={{marginRight:8}} onClick={()=>go('cta')}>
+          Скачать бесплатно
+        </button>
+        <button
+          className={`hamburger${menuOpen?' open':''}`}
+          onClick={()=>setMenuOpen(o=>!o)}
+          aria-label="Меню"
+        >
+          <span/><span/><span/>
+        </button>
+      </nav>
+
+      {/* Mobile full-screen menu */}
+      <div className={`mob-menu${menuOpen?' open':''}`}>
+        {links.map(([id,label]) => (
+          <a key={id} href={`#${id}`} onClick={e=>{e.preventDefault();go(id);}}>
+            {label}
+          </a>
+        ))}
+        <button className="nav-cta" style={{fontSize:16,padding:'14px 32px'}} onClick={()=>go('cta')}>
+          Скачать бесплатно
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TICKER
+═══════════════════════════════════════════════════════════ */
+function Ticker() {
+  const [coins, setCoins] = React.useState(COINS_FALLBACK);
+
+  React.useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const data = await fetchCoins();
+        if (active && data.length) setCoins(data);
+      } catch(e) { /* оставляем fallback */ }
+    };
+    load();
+    const timer = setInterval(load, 30000);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
+
+  const doubled = [...coins, ...coins];
+  return (
+    <div className="ticker-wrap" style={{marginTop:'64px'}}>
+      <div className="ticker-track">
+        {doubled.map((c,i) => (
+          <div className="ticker-item" key={i}>
+            <span className="t-name">{c.n}</span>
+            <span className="t-price">{c.p}</span>
+            <span className={`t-change ${c.up?'t-up':'t-down'}`}>{c.c}</span>
+            <span className="ticker-sep">·</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MACOS MOCKUP
+═══════════════════════════════════════════════════════════ */
+function MacMockup() {
+  const trades = [
+    {ticker:'BTC',side:'LONG',cls:'long',date:'3 мар 2026',pnl:'+$842',pCls:'pos',bars:[60,45,75,90,80],bc:'var(--profit)'},
+    {ticker:'ETH',side:'SHORT',cls:'short',date:'2 мар 2026',pnl:'-$218',pCls:'neg',bars:[80,60,40,55,30],bc:'var(--loss)'},
+    {ticker:'SOL',side:'LONG',cls:'long',date:'1 мар 2026',pnl:'+$1,104',pCls:'pos',bars:[40,55,70,85,95],bc:'var(--profit)'},
+  ];
+  const stats = [
+    {label:'Баланс',val:'$12,840',cls:'purple',sub:'+$2,840 всего'},
+    {label:'Win Rate',val:'68.4%',cls:'green',sub:'↑ 3.2% за месяц'},
+    {label:'Общий PnL',val:'+$3,241',cls:'green',sub:'247 сделок'},
+    {label:'Profit Factor',val:'2.14',cls:'purple',sub:'Отличный результат'},
+  ];
+  const sideItems = [
+    {grp:'ОБЗОР',  items:[{icon:'📊',label:'Dashboard',active:true}]},
+    {grp:'ЖУРНАЛ', items:[{icon:'📋',label:'Сделки'},{icon:'💰',label:'Депозит'}]},
+    {grp:'РЫНОК',  items:[{icon:'📈',label:'Монеты'}]},
+    {grp:'AI',     items:[{icon:'🧠',label:'Анализ'}]},
+    {grp:'СИСТЕМА',items:[{icon:'📖',label:'Справочник'},{icon:'⚙️',label:'Настройки'}]},
+  ];
+
+  return (
+    <div className="hero-mockup">
+      <div className="mockup-window">
+        <div className="mockup-titlebar">
+          <div className="dot dot-red"/><div className="dot dot-yellow"/><div className="dot dot-green"/>
+          <div className="mockup-title">CryptoNites — Dashboard</div>
+          <div style={{width:40}}/>
+        </div>
+        <div className="mockup-body">
+          <div className="mockup-sidebar">
+            {sideItems.map(grp => (
+              <React.Fragment key={grp.grp}>
+                <div className="sidebar-label">{grp.grp}</div>
+                {grp.items.map(it => (
+                  <div key={it.label} className={`sidebar-item${it.active?' active':''}`}>
+                    <span className="s-icon">{it.icon}</span>{it.label}
+                  </div>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+          <div className="mockup-content">
+            <div className="stat-cards">
+              {stats.map(s => (
+                <div className="stat-card" key={s.label}>
+                  <div className="stat-label">{s.label}</div>
+                  <div className={`stat-value ${s.cls}`}>{s.val}</div>
+                  <div className="stat-sub">{s.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="trade-list-header">
+              <span>ПОСЛЕДНИЕ СДЕЛКИ</span>
+              <span style={{color:'var(--accent2)',fontSize:11}}>Экспорт CSV ↓</span>
+            </div>
+            <div className="trade-rows">
+              {trades.map((tr,i) => (
+                <div className="trade-row" key={i}>
+                  <span className="trade-ticker">{tr.ticker}</span>
+                  <span className={`trade-side ${tr.cls}`}>{tr.side}</span>
+                  <span className="trade-date">{tr.date}</span>
+                  <div className="mini-chart">
+                    {tr.bars.map((h,j) => (
+                      <div key={j} className="bar" style={{height:`${h}%`,background:tr.bc,animationDelay:`${0.1+j*0.05}s`}}/>
+                    ))}
+                  </div>
+                  <span className={`trade-pnl ${tr.pCls}`}>{tr.pnl}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════════════════ */
+function Hero({hero}) {
+  const go = (id) => {
+    const el = document.getElementById(id);
+    if (window.__lenis) window.__lenis.scrollTo(el, {offset:-80, duration:1.4});
+    else el?.scrollIntoView({behavior:'smooth'});
+  };
+  return (
+    <section id="hero" style={{maxWidth:'100%', paddingTop:60}}>
+      <div className="hero-badge">
+        <div className="badge-dot"/>
+        {hero.badge}
+      </div>
+      <h1>
+        <span className="gradient-text">{hero.titleLine1}</span><br/>
+        {hero.titleLine2}<br/>
+        для <span className="highlight">{hero.titleLine3}</span>
+      </h1>
+      <p className="hero-sub">{hero.sub}</p>
+      <div className="hero-buttons">
+        <a href="#" className="btn-primary">
+          <svg width={18} height={18} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+          </svg>
+          {hero.btnPrimary}
+        </a>
+        <a href="#features" className="btn-secondary" onClick={e=>{e.preventDefault();go('features');}}>
+          <svg width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <circle cx={12} cy={12} r={10}/><polyline points="12 8 16 12 12 16"/><line x1={8} y1={12} x2={16} y2={12}/>
+          </svg>
+          {hero.btnSecondary}
+        </a>
+      </div>
+      <MacMockup />
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS STRIP
+═══════════════════════════════════════════════════════════ */
+function StatsStrip() {
+  const items = [
+    {val:30, suffix:'+', label:'Функций и инструментов', id:'s1'},
+    {val:9,  suffix:'',  label:'AI-моделей на выбор',    id:'s2'},
+    {val:4,  suffix:'',  label:'Форматов экспорта',      id:'s3'},
+    {val:0,  suffix:'%', label:'Данных утекло в облако', id:'s4'},
+  ];
+  const refs = useRef([]);
+  const [counts, setCounts] = useState(items.map(() => 0));
+  const animated = useRef(false);
+
+  useEffect(() => {
+    const strip = document.querySelector('.stats-strip');
+    if (!strip) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !animated.current) {
+        animated.current = true;
+        items.forEach((item, i) => {
+          const start = performance.now();
+          const dur = 1400;
+          const step = (now) => {
+            const p = Math.min((now - start) / dur, 1);
+            const ease = 1 - Math.pow(1 - p, 3);
+            setCounts(prev => {
+              const next = [...prev];
+              next[i] = Math.round(ease * item.val);
+              return next;
+            });
+            if (p < 1) requestAnimationFrame(step);
+          };
+          setTimeout(() => requestAnimationFrame(step), i * 120);
+        });
+      }
+    }, {threshold:0.5});
+    obs.observe(strip);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div className="stats-strip">
+      {items.map((it, i) => (
+        <div className="stat-strip-item" key={it.id}>
+          <div className="big-num">{counts[i]}{it.suffix}</div>
+          <div className="big-label">{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURES
+═══════════════════════════════════════════════════════════ */
+function FeatureCard({feat, delay}) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVis(true); obs.disconnect(); }
+    }, {threshold:.1});
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const onMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className={`feat-card${vis?' visible':''}`}
+      style={{animationDelay:`${delay}s`}}
+      onMouseMove={onMove}
+    >
+      <div className="feat-icon" style={{background:feat.bg}}>{feat.icon}</div>
+      <div className="feat-title">{feat.title}</div>
+      <div className="feat-desc">{feat.desc}</div>
+      <span className={`feat-badge ${feat.bCls}`}>{feat.badge}</span>
+    </div>
+  );
+}
+
+function Features({features}) {
+  return (
+    <section id="features">
+      <span className="section-eyebrow">Всё что нужно трейдеру</span>
+      <h2 className="section-title">Возможности, которых<br/>нет больше нигде на macOS</h2>
+      <p className="section-sub">Каждый инструмент создан специально для крипто-трейдера, а не адаптирован из универсального приложения.</p>
+      <div className="features-grid">
+        {features.map((f,i) => <FeatureCard key={i} feat={f} delay={i*0.08}/>)}
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GALLERY (Swiper)
+═══════════════════════════════════════════════════════════ */
+function Gallery({slides}) {
+  const prevRef = useRef(null);
+  const nextRef = useRef(null);
+
+  useEffect(() => {
+    const swiper = new Swiper('#ss-swiper', {
+      slidesPerView:'auto', centeredSlides:true,
+      spaceBetween:24, loop:true, grabCursor:true, speed:600,
+      pagination:{el:'.ss-pag', clickable:true},
+      keyboard:{enabled:true},
+      autoplay:{delay:3800, disableOnInteraction:true, pauseOnMouseEnter:true},
+    });
+    const p = prevRef.current, n = nextRef.current;
+    const prev = () => swiper.slidePrev();
+    const next = () => swiper.slideNext();
+    p.addEventListener('click', prev);
+    n.addEventListener('click', next);
+    return () => { p.removeEventListener('click', prev); n.removeEventListener('click', next); swiper.destroy(); };
+  }, []);
+
+  return (
+    <section id="gallery" className="gallery-section">
+      <div className="gallery-header">
+        <span className="section-eyebrow">Галерея</span>
+        <h2 className="section-title">Посмотрите сами</h2>
+        <p className="section-sub" style={{marginBottom:0}}>Живые скриншоты приложения — листайте и смотрите на что способен CryptoNites</p>
+      </div>
+      <div className="ss-wrap">
+        <div className="swiper ss-swiper" id="ss-swiper">
+          <div className="swiper-wrapper">
+            {slides.map((s,i) => (
+              <div className="swiper-slide" key={i}>
+                <img className="slide-img" src={s.src} alt={s.cap}/>
+                <div className="slide-caption">{s.cap}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="ss-prev" ref={prevRef}>
+          <svg width={18} height={18} fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </div>
+        <div className="ss-next" ref={nextRef}>
+          <svg width={18} height={18} fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </div>
+        <div className="swiper-pagination ss-pag"/>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AI WIDGET (unique section right column)
+═══════════════════════════════════════════════════════════ */
+function AIWidget() {
+  const [phase, setPhase] = useState('idle'); // idle | user | typing | bot
+  const [botText, setBotText] = useState('');
+  const fullBot = 'Отличный результат! Win Rate 68% значительно выше среднего по рынку. Profit Factor 2.1 — профессиональный уровень. Слабое место: средний убыток выше среднего профита на 12%. Рекомендую жёстче соблюдать стоп-лосс на первых входах.';
+  const ref = useRef(null);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !doneRef.current) {
+        doneRef.current = true;
+        setTimeout(()=>setPhase('user'), 400);
+        setTimeout(()=>setPhase('typing'), 1400);
+        setTimeout(()=>{
+          setPhase('bot');
+          let i = 0;
+          const iv = setInterval(()=>{
+            i += 3;
+            setBotText(fullBot.slice(0,i));
+            if (i >= fullBot.length) clearInterval(iv);
+          }, 14);
+        }, 3000);
+      }
+    }, {threshold:.4});
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const pills = [
+    {label:'Llama 3.2 3B', color:'var(--profit)', active:true},
+    {label:'GPT-4o Mini',  color:'var(--accent2)', active:false},
+    {label:'Claude Haiku', color:'var(--warning)', active:false},
+    {label:'Mistral 7B',   color:'var(--loss)',    active:false},
+    {label:'Qwen 2 7B',    color:'var(--profit)',  active:false},
+  ];
+
+  const [activePill, setActivePill] = useState(0);
+
+  return (
+    <div ref={ref}>
+      <div className="ai-vis">
+        <div className="ai-header">AI АНАЛИЗ · OPENROUTER</div>
+        <div className="ai-messages">
+          {(phase==='user'||phase==='typing'||phase==='bot') && (
+            <div className="ai-msg user" style={{opacity:1,transition:'opacity .5s'}}>
+              Проанализируй мои сделки за март. Win Rate 68%, Profit Factor 2.1
+            </div>
+          )}
+          {phase==='typing' && (
+            <div className="ai-typing">
+              <div className="typing-dot"/><div className="typing-dot"/><div className="typing-dot"/>
+            </div>
+          )}
+          {phase==='bot' && (
+            <div className="ai-msg bot" style={{opacity:1,transition:'opacity .5s'}}>
+              {botText}
+            </div>
+          )}
+        </div>
+        <div className="ai-actions">
+          <div className="ai-action-btn" style={{background:'rgba(0,201,107,0.1)',borderColor:'rgba(0,201,107,0.2)',color:'var(--profit)'}}>✦ Сильные стороны</div>
+          <div className="ai-action-btn" style={{background:'rgba(255,59,92,0.08)',borderColor:'rgba(255,59,92,0.15)',color:'var(--loss)'}}>⚠ Слабые стороны</div>
+        </div>
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:20}}>
+        {pills.map((p,i) => (
+          <div
+            key={i}
+            onClick={()=>setActivePill(i)}
+            style={{
+              display:'inline-flex',alignItems:'center',gap:6,
+              padding:'6px 12px',borderRadius:8,fontSize:11,fontWeight:600,
+              border:`1px solid ${i===activePill?'rgba(124,111,255,.35)':'var(--border)'}`,
+              background:i===activePill?'rgba(124,111,255,.15)':'var(--bg3)',
+              color:i===activePill?'var(--accent2)':'var(--text2)',
+              cursor:'pointer',transition:'all .2s',
+            }}
+          >
+            <span style={{width:6,height:6,borderRadius:'50%',background:p.color,display:'inline-block',flexShrink:0}}/>
+            {p.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UNIQUE SECTION
+═══════════════════════════════════════════════════════════ */
+function UniqueItem({item, delay}) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVis(true); obs.disconnect(); }
+    }, {threshold:.1});
+    obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`unique-item${vis?' visible':''}`} style={{transitionDelay:vis?`${delay}s`:'0s'}}>
+      <div className="unique-num">{item.n}</div>
+      <div className="unique-text">
+        <h4>{item.title}</h4>
+        <p>{item.desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function UniqueSection({unique}) {
+  return (
+    <div className="unique-section" id="unique">
+      <div className="unique-inner">
+        <span className="section-eyebrow">Почему CryptoNites</span>
+        <h2 className="section-title" style={{marginBottom:60}}>
+          Чего нет<br/>ни в одном другом<br/>macOS-приложении
+        </h2>
+        <div className="unique-grid">
+          <div className="unique-list">
+            {unique.map((u,i) => <UniqueItem key={u.n} item={u} delay={i*0.12}/>)}
+          </div>
+          <AIWidget/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPARISON
+═══════════════════════════════════════════════════════════ */
+function Comparison({compareRows}) {
+  useEffect(() => {
+    if (typeof gsap === 'undefined') return;
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.from('.compare-table tbody tr', {
+      scrollTrigger:{trigger:'.compare-table', start:'top 80%', once:true},
+      x:-28, opacity:0, duration:.45, stagger:.05, ease:'power2.out',
+    });
+  }, []);
+
+  return (
+    <div className="compare-section" id="compare">
+      <div className="compare-inner">
+        <div style={{textAlign:'center', marginBottom:56}}>
+          <span className="section-eyebrow" style={{display:'inline-block'}}>Сравнение</span>
+          <h2 className="section-title">CryptoNites vs. остальные</h2>
+        </div>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th>Функция</th>
+              <th className="our">CryptoNites</th>
+              <th>Notion / Таблицы</th>
+              <th>Прочие журналы</th>
+            </tr>
+          </thead>
+          <tbody>
+            {compareRows.map((row,i) => (
+              <tr key={i}>
+                <td>{row[0]}</td>
+                <td className="our-col"><span className="check">{row[1]}</span></td>
+                <td><span className="cross">{row[2]}</span></td>
+                <td><span className="cross">{row[3]}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRIVACY
+═══════════════════════════════════════════════════════════ */
+function PrivCard({icon, title, desc, delay}) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVis(true); obs.disconnect(); }
+    }, {threshold:.2});
+    obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`priv-card${vis?' visible':''}`} style={{transitionDelay:vis?`${delay}s`:'0s'}}>
+      <span className="priv-icon">{icon}</span>
+      <div className="priv-title">{title}</div>
+      <div className="priv-desc">{desc}</div>
+    </div>
+  );
+}
+
+function Privacy() {
+  const cards = [
+    {icon:'🔐', title:'Keychain с максимальным флагом', desc:'kSecAttrAccessibleWhenUnlockedThisDeviceOnly — самый строгий уровень. Не синхронизируется с iCloud, не покидает устройство ни при каких условиях.'},
+    {icon:'💾', title:'SwiftData только на диске', desc:'Все сделки, депозиты и аналитика хранятся в локальной базе SwiftData. Никакой синхронизации без вашего явного действия.'},
+    {icon:'🛡️', title:'App Sandbox macOS', desc:'Полная изоляция ОС. Доступ к сети только для явных API-запросов. Никаких фоновых соединений, никакой телеметрии.'},
+  ];
+  return (
+    <section id="security" className="privacy-section" style={{maxWidth:'100%'}}>
+      <div className="privacy-inner">
+        <div style={{textAlign:'center'}}>
+          <span className="section-eyebrow">Приватность</span>
+          <h2 className="section-title">Ваши данные — только ваши.<br/>Всегда.</h2>
+          <p className="section-sub" style={{marginBottom:0}}>
+            Нет сервера. Нет аккаунта. Нет телеметрии. Этот раздел не маркетинг — это архитектурное решение.
+          </p>
+        </div>
+        <div className="privacy-cards">
+          {cards.map((c,i) => <PrivCard key={i} {...c} delay={i*0.15}/>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CTA
+═══════════════════════════════════════════════════════════ */
+function CTA() {
+  return (
+    <section id="cta" className="cta-section" style={{maxWidth:'100%'}}>
+      <div className="cta-glow"/>
+      <div className="cta-inner">
+        <div className="hero-badge" style={{display:'inline-flex',opacity:1,transform:'none',margin:'0 auto 28px',animation:'none'}}>
+          <div className="badge-dot"/>
+          Бесплатно · Открытый исходный код
+        </div>
+        <h2 className="cta-title">
+          <span className="gradient-text">Начните торговать<br/>умнее — сегодня</span>
+        </h2>
+        <p className="cta-sub">30 секунд до первой сделки в журнале. Никакой регистрации, никаких подписок, никаких облаков.</p>
+        <div style={{display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap'}}>
+          <a href="#" className="btn-primary" style={{fontSize:17, padding:'18px 40px'}}>
+            <svg width={20} height={20} fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+            Скачать для macOS
+          </a>
+        </div>
+        <div className="sys-req">
+          <svg width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <circle cx={12} cy={12} r={10}/><line x1={12} y1={8} x2={12} y2={12}/><line x1={12} y1={16} x2={12.01} y2={16}/>
+          </svg>
+          macOS 14 Sonoma или новее · Apple Silicon & Intel Mac
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════════════ */
+function Footer() {
+  const go = (id) => {
+    const el = document.getElementById(id);
+    if (window.__lenis) window.__lenis.scrollTo(el, {offset:-80, duration:1.4});
+    else el?.scrollIntoView({behavior:'smooth'});
+  };
+  return (
+    <footer>
+      <div className="footer-logo">
+        <div className="nav-logo-icon" style={{width:26,height:26,fontSize:13}}>⚡</div>
+        CryptoNites
+      </div>
+      <nav className="footer-links">
+        {[['features','Функции'],['gallery','Галерея'],['unique','Уникальность'],['security','Приватность']].map(([id,label]) => (
+          <a key={id} href={`#${id}`} onClick={e=>{e.preventDefault();go(id);}}>{label}</a>
+        ))}
+      </nav>
+      <div className="footer-copy">© 2026 CryptoNites. Сделано с ❤️ для трейдеров.</div>
+    </footer>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROOT APP
+═══════════════════════════════════════════════════════════ */
+function App() {
+  const [content, setContent] = useState(CONTENT_DEFAULT);
+  useParticleCanvas();
+
+  // Подтягиваем контент из Gist при загрузке
+  useEffect(() => {
+    if (!GIST_RAW_URL) return;
+    fetch(GIST_RAW_URL + '?t=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => setContent({...CONTENT_DEFAULT, ...data}))
+      .catch(() => {});
+  }, []);
+
+  // Lenis + GSAP init
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const LenisClass = window.Lenis || (window.Lenis = window.lenis);
+    if (!LenisClass) { console.warn('Lenis not loaded'); return; }
+    const lenis = new LenisClass({lerp:.08, smoothWheel:true});
+    window.__lenis = lenis;
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(time => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+
+    setTimeout(() => ScrollTrigger.refresh(), 600);
+
+    return () => {
+      lenis.destroy();
+      gsap.ticker.remove(time => lenis.raf(time * 1000));
+      ScrollTrigger.getAll().forEach(st => st.kill());
+    };
+  }, []);
+
+  // Smooth anchor clicks for any remaining hrefs
+  useEffect(() => {
+    const handler = (e) => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const id = a.getAttribute('href').slice(1);
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (el) {
+        e.preventDefault();
+        if (window.__lenis) window.__lenis.scrollTo(el, {offset:-80, duration:1.4});
+        else el.scrollIntoView({behavior:'smooth'});
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
+  return (
+    <>
+      <ScrollProgress/>
+      <Nav/>
+      <Ticker/>
+      <Hero hero={content.hero}/>
+      <StatsStrip/>
+      <Features features={content.features}/>
+      <Gallery slides={content.slides}/>
+      <UniqueSection unique={content.unique}/>
+      <Comparison compareRows={content.compareRows}/>
+      <Privacy/>
+      <CTA/>
+      <Footer/>
+      <BackToTop/>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOUNT
+═══════════════════════════════════════════════════════════ */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
