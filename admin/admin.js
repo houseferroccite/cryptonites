@@ -17,7 +17,9 @@ const CONTENT_DEFAULT = {
     titleLine3: 'крипто-трейдеров',
     sub: 'CryptoNites — это не просто журнал сделок. Это AI-powered аналитический центр, построенный нативно для macOS с глубокой интеграцией в экосистему Apple.',
     btnPrimary: 'Скачать для Mac',
+    btnPrimaryHref: '#',
     btnSecondary: 'Смотреть возможности',
+    btnSecondaryHref: '#features',
   },
   features: [
     {icon:'🧠',bg:'rgba(124,111,255,0.15)',title:'AI-анализ через OpenRouter',desc:'Подключите GPT-4o, Claude Sonnet или бесплатные Llama/Mistral модели. AI анализирует ваши сделки, находит паттерны и даёт рекомендации прямо в приложении.',badge:'Эксклюзивно',bCls:'badge-unique'},
@@ -64,6 +66,7 @@ const CONTENT_DEFAULT = {
     title: 'Начните торговать\nумнее — сегодня',
     sub: '30 секунд до первой сделки в журнале. Никакой регистрации, никаких подписок, никаких облаков.',
     btn: 'Скачать для macOS',
+    btnHref: '#',
     sysReq: 'macOS 14 Sonoma или новее · Apple Silicon & Intel Mac',
   },
   footer: {
@@ -302,8 +305,12 @@ function HeroEditor({ hero, onChange }) {
       <Field label="Заголовок — строка 3 (зелёный акцент)" value={hero.titleLine3} onChange={v => set('titleLine3', v)} />
       <Field label="Подзаголовок" value={hero.sub} onChange={v => set('sub', v)} multiline rows={4} />
       <div className="adm-row">
-        <div className="adm-col"><Field label="Кнопка 1 (главная)" value={hero.btnPrimary} onChange={v => set('btnPrimary', v)} /></div>
-        <div className="adm-col"><Field label="Кнопка 2 (вторичная)" value={hero.btnSecondary} onChange={v => set('btnSecondary', v)} /></div>
+        <div className="adm-col"><Field label="Кнопка 1 — текст" value={hero.btnPrimary} onChange={v => set('btnPrimary', v)} /></div>
+        <div className="adm-col"><Field label="Кнопка 1 — ссылка" value={hero.btnPrimaryHref || '#'} onChange={v => set('btnPrimaryHref', v)} /></div>
+      </div>
+      <div className="adm-row">
+        <div className="adm-col"><Field label="Кнопка 2 — текст" value={hero.btnSecondary} onChange={v => set('btnSecondary', v)} /></div>
+        <div className="adm-col"><Field label="Кнопка 2 — ссылка" value={hero.btnSecondaryHref || '#features'} onChange={v => set('btnSecondaryHref', v)} /></div>
       </div>
     </div>
   );
@@ -432,7 +439,10 @@ function CTAEditor({ cta, onChange }) {
       <Field label="Badge-текст" value={cta.badge} onChange={v => set('badge', v)} />
       <Field label="Заголовок (перенос строки = \\n)" value={cta.title} onChange={v => set('title', v)} multiline rows={2} />
       <Field label="Подзаголовок" value={cta.sub} onChange={v => set('sub', v)} multiline rows={3} />
-      <Field label="Текст кнопки" value={cta.btn} onChange={v => set('btn', v)} />
+      <div className="adm-row">
+        <div className="adm-col"><Field label="Текст кнопки" value={cta.btn} onChange={v => set('btn', v)} /></div>
+        <div className="adm-col"><Field label="Ссылка кнопки" value={cta.btnHref || '#'} onChange={v => set('btnHref', v)} /></div>
+      </div>
       <Field label="Системные требования" value={cta.sysReq} onChange={v => set('sysReq', v)} />
     </div>
   );
